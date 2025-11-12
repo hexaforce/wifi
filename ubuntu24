@@ -36,9 +36,13 @@ sudo ip link set wlo1 down
 sudo ip link set wlo1 up
 sudo systemctl restart wpa_supplicant@wlo1
 
+======================================================================
+
 iw dev p2p-wlo1-0 info
 sudo wpa_cli -i p2p-wlo1-0 status
 ip addr show p2p-wlo1-0
+
+======================================================================
 
 sudo wpa_cli -p /var/run/wpa_supplicant -i p2p-wlo1-0 wps_pbc
 

@@ -1,8 +1,14 @@
 
+======================================================================
+Group owner
+======================================================================
+
+
+sudo systemctl stop wpa_supplicant.service
 sudo systemctl mask wpa_supplicant.service
 
 echo "[keyfile]
-unmanaged-devices=interface-name:wlo*;interface-name:p2p-*" | sudo tee /etc/NetworkManager/conf.d/unmanaged.conf
+unmanaged-devices=sinterface-name:wlo*;interface-name:p2p-*" | sudo tee /etc/NetworkManager/conf.d/unmanaged.conf
 
 echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
@@ -44,18 +50,24 @@ iw dev $(basename /sys/class/net/p2p-wlo1-*) info 2>/dev/null
 sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlo1-*)" status 2>/dev/null
 ip addr show $(ls /sys/class/net/ | grep ^p2p-wlo1-)
 
+======================================================================
+
+<Client join>
 
 ======================================================================
 
 sudo wpa_cli -p /var/run/wpa_supplicant -i p2p-wlo1-0 wps_pbc
 
-iw dev p2p-wlo1-0 station dump
+======================================================================
+
+iw dev $(basename /sys/class/net/p2p-wlo1-*) station dump
+sudo wpa_cli -i wlo1 p2p_peer da:3a:dd:09:24:2a
+
+======================================================================
 
 sudo ip addr add 192.168.49.1/24 dev p2p-wlo1-0
 
-ip addr show p2p-wlo1-0
-
-sudo wpa_cli -i wlo1 p2p_peer da:3a:dd:09:24:2a
+======================================================================
 
 sudo journalctl -u wpa_supplicant@wlo1 -f
 

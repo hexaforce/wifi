@@ -1,0 +1,35 @@
+
+sudo systemctl stop wpa_supplicant.service
+sudo systemctl mask wpa_supplicant.service
+
+echo "[keyfile]
+unmanaged-devices=interface-name:wlan*;interface-name:p2p-*" | sudo tee /etc/NetworkManager/conf.d/unmanaged.conf
+
+echo 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+p2p_go_intent=0
+device_name=Aircraft
+device_type=1-0050F204-1
+config_methods=virtual_push_button physical_display keypad' | sudo tee /etc/wpa_supplicant/wpa_supplicant-aircraft.conf
+
+sudo systemctl edit wpa_supplicant@aircraft.service
+```
+[Service]
+ExecStart=
+ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -iwlan1 -c/etc/wpa_supplicant/wpa_supplicant-aircraft.conf
+```
+
+sudo systemctl enable --now wpa_supplicant@aircraft.service
+
+sudo systemctl status NetworkManager
+sudo systemctl status wpa_supplicant.service
+sudo systemctl status wpa_supplicant@aircraft.service
+
+sudo wpa_cli -i wlan0 p2p_flush
+sudo wpa_cli -i wlan0 p2p_find
+sudo wpa_cli -i wlan0 p2p_peers
+
+sudo wpa_cli -i wlan1 p2p_connect bc:09:1b:1d:15:92 pbc join
+
+ip addr show p2p-wlan0-0
+sudo ip addr add 192.168.49.2/24 dev p2p-wlan1-8

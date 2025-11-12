@@ -16,18 +16,18 @@ p2p_oper_reg_class=81
 p2p_oper_channel=6
 country=JP" | sudo tee /etc/wpa_supplicant/wpa_supplicant-ground.conf
 
-sudo systemctl edit wpa_supplicant@ground.service
+sudo systemctl edit wpa_supplicant@wlo1.service
 ```
 [Service]
 ExecStart=
 ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -iwlo1 -c/etc/wpa_supplicant/wpa_supplicant-ground.conf
 ```
 
-sudo systemctl enable --now wpa_supplicant@ground.service
+sudo systemctl enable --now wpa_supplicant@wlo1.service
 
 sudo systemctl status NetworkManager
 sudo systemctl status wpa_supplicant.service
-sudo systemctl status wpa_supplicant@ground.service
+sudo systemctl status wpa_supplicant@wlo1.service
 
 ======================================================================
 

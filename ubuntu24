@@ -17,7 +17,10 @@ ExecStart=
 ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -iwlo1 -c/etc/wpa_supplicant/wpa_supplicant-ground.conf
 ```
 
+sudo systemctl daemon-reload
 sudo systemctl enable --now wpa_supplicant@wlo1.service
+
+sudo systemctl restart NetworkManager
 
 sudo systemctl status NetworkManager
 sudo systemctl status wpa_supplicant.service

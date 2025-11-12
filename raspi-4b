@@ -18,12 +18,13 @@ sudo systemctl edit wpa_supplicant@wlan1.service
 ExecStart=
 ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -iwlan1 -c/etc/wpa_supplicant/wpa_supplicant-aircraft.conf
 ```
-
 sudo systemctl enable --now wpa_supplicant@wlan1.service
 
 sudo systemctl status NetworkManager
 sudo systemctl status wpa_supplicant.service
 sudo systemctl status wpa_supplicant@wlan1.service
+
+======================================================================
 
 sudo wpa_cli -i wlan1 p2p_flush
 sudo wpa_cli -i wlan1 p2p_find

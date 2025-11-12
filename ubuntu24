@@ -8,13 +8,7 @@ echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 device_name=GroundStation
 device_type=1-0050F204-1
-config_methods=virtual_push_button physical_display keypad
-p2p_disabled=0
-p2p_go_intent=7
-p2p_listen_reg_class=81
-p2p_oper_reg_class=81
-p2p_oper_channel=6
-country=JP" | sudo tee /etc/wpa_supplicant/wpa_supplicant-ground.conf
+config_methods=virtual_push_button physical_display keypad" | sudo tee /etc/wpa_supplicant/wpa_supplicant-ground.conf
 
 sudo systemctl edit wpa_supplicant@wlo1.service
 ```

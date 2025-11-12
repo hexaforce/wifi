@@ -38,9 +38,12 @@ sudo systemctl restart wpa_supplicant@wlo1
 
 ======================================================================
 
-iw dev p2p-wlo1-0 info
-sudo wpa_cli -i p2p-wlo1-0 status
-ip addr show p2p-wlo1-0
+sudo wpa_cli -i wlo1 p2p_group_add freq=2437
+
+iw dev $(basename /sys/class/net/p2p-wlo1-*) info 2>/dev/null
+sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlo1-*)" status 2>/dev/null
+ip addr show $(ls /sys/class/net/ | grep ^p2p-wlo1-)
+
 
 ======================================================================
 

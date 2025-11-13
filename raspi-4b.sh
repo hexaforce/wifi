@@ -9,19 +9,20 @@ sudo systemctl mask wpa_supplicant.service
 # WifiデバイスをNetworkManagerの管理下から除外します
 echo "[keyfile]
 unmanaged-devices=interface-name:wlan*;interface-name:p2p-*" | sudo tee /etc/NetworkManager/conf.d/unmanaged.conf
+
 sudo systemctl restart NetworkManager
 
-# Aircraft用wpa_supplicantの設定
+# ドローン用のwpa_supplicant設定を作成
 echo 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 p2p_go_intent=0
 device_name=Aircraft
-device_type=6-0050F204-1
+device_type=1-0050F204-1
 config_methods=virtual_push_button physical_display keypad' | sudo tee /etc/wpa_supplicant/wpa_supplicant-aircraft.conf
 
 # 使用するWifiデバイスのwpa_supplicantサービスを追加
 sudo systemctl enable wpa_supplicant@wlan0.service
-# Aircraft用の設定を読み込むようにoverride
+# ドローン用のwpa_supplicant設定を読み込むようにoverride
 sudo systemctl edit wpa_supplicant@wlan0.service
 ```
 [Service]
@@ -55,17 +56,17 @@ sudo systemctl restart wpa_supplicant@wlan0
 # GO(group owner)に接続開始
 sudo wpa_cli -i wlan0 p2p_find
 sudo wpa_cli -i wlan0 p2p_peers
-# 検出されたGOのMACアドレスに対してJoin
+# 検出されたGOのMACアドレスに対してPBC(WPS Push Button Configuration)要求する
 sudo wpa_cli -i wlan0 p2p_connect bc:09:1b:1d:15:92 pbc join
 
 # ======================================================================
 
 # <GO wps_pbc>
-# GO側でPBC(WPS Push Button Configuration)要求を受け入れる
+# GO側でPBC(WPS Push Button Configuration)要求の受け入れ待ち
 
 # ======================================================================
 
-# 接続後のステータス確認
+# 接続確立後のステータス確認
 iw dev $(basename /sys/class/net/p2p-wlan0-*) info 2>/dev/null
 sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlan0-*)" status 2>/dev/null
 ip addr show $(ls /sys/class/net/ | grep ^p2p-wlan0-)

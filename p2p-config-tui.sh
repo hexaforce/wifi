@@ -1,5 +1,5 @@
 #!/bin/bash
-# p2p-config-tui.sh - raspi-config風 Wi‑Fi Direct (P2P) 設定メニュー
+# p2p-config-tui.sh - raspi-config-style Wi-Fi Direct (P2P) setup menu
 # Requires: whiptail, wpa_cli, ip, iw, systemd (journalctl), bash
 # Optional: NetworkManager, wpa_supplicant@<iface>.service
 # License: MIT
@@ -41,6 +41,23 @@ $out
   fi
 }
 
+write_file_sudo() {
+  local target="$1" content="$2" tmp
+  tmp=$(mktemp)
+  printf '%s\n' "$content" >"$tmp"
+  sudo mkdir -p "$(dirname "$target")"
+  if sudo install -m 0644 "$tmp" "$target"; then
+    rm -f "$tmp"
+    textbox "Updated ${target}
+
+${content}"
+  else
+    rm -f "$tmp"
+    msg "Failed to write ${target}"
+    return 1
+  fi
+}
+
 detect_iface() {
   # pick first wlan*/wlo* that exists
   for n in /sys/class/net/*; do
@@ -60,27 +77,82 @@ p2p_name() {
   echo ""
 }
 
-show_status() {
+show_systemd_status() {
+  local iface="$1"
+  run "systemctl status -n 0 wpa_supplicant@${iface}"
+}
+
+show_iw_status() {
+  run "iw dev"
+}
+
+show_wpa_status() {
   local iface="$1"
   local p2p="$(p2p_name "$iface")"
-  local out="=== systemctl ===
-$(systemctl status -n 0 "wpa_supplicant@${iface}" 2>&1)
-
-=== iw dev ===
-$(iw dev 2>&1)
-
-=== wpa_cli status (${iface}) ===
-$(wpa_cli -i "${iface}" status 2>&1)
-
-=== wpa_cli status (${p2p}) ===
-$( [ -n "$p2p" ] && wpa_cli -i "${p2p}" status 2>&1 || echo "(no p2p iface yet)")
-"
-  textbox "$out"
+  run "wpa_cli -i ${iface} status"
+  if [ -n "$p2p" ]; then
+    run "wpa_cli -i ${p2p} status"
+  else
+    msg "No P2P interface yet (run GO start first)."
+  fi
 }
 
 tail_logs() {
   local iface="$1"
   run "journalctl -u wpa_supplicant@${iface} -n 200 --no-pager"
+}
+
+setup_environment() {
+  local setup_iface setup_cfg setup_device setup_nm force_client cfg_path nm_content config_content override_dir override_path override_content
+  setup_iface=$(input "Wi-Fi interface to configure (e.g., wlan0 / wlo1)" "$iface") || true
+  setup_iface=${setup_iface:-$iface}
+  [ -z "${setup_iface:-}" ] && { msg "Interface is required for setup."; return; }
+
+  local default_cfg="wpa_supplicant-${setup_iface}.conf"
+  setup_cfg=$(input "wpa_supplicant config filename (stored under /etc/wpa_supplicant)" "$default_cfg") || true
+  setup_cfg=${setup_cfg:-$default_cfg}
+
+  setup_device=$(input "Device name advertised over P2P" "P2PDevice") || true
+  setup_device=${setup_device:-P2PDevice}
+
+  local default_nm="interface-name:${setup_iface};interface-name:p2p-*"
+  setup_nm=$(input "NetworkManager unmanaged-devices entry" "$default_nm") || true
+  setup_nm=${setup_nm:-$default_nm}
+
+  force_client=0
+  if yesno "Force client intent (add p2p_go_intent=0)?"; then
+    force_client=1
+  fi
+
+  config_content="ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1"
+  if [ "$force_client" -eq 1 ]; then
+    config_content+=$'\n'"p2p_go_intent=0"
+  fi
+  config_content+=$'\n'"device_name=${setup_device}"
+  config_content+=$'\n'"device_type=1-0050F204-1"
+  config_content+=$'\n'"config_methods=virtual_push_button physical_display keypad"
+
+  cfg_path="/etc/wpa_supplicant/${setup_cfg}"
+  nm_content="[keyfile]
+unmanaged-devices=${setup_nm}"
+  override_dir="/etc/systemd/system/wpa_supplicant@${setup_iface}.service.d"
+  override_path="${override_dir}/override.conf"
+  override_content="[Service]
+ExecStart=
+ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -i${setup_iface} -c${cfg_path}
+"
+
+  run "sudo systemctl stop wpa_supplicant.service || true"
+  run "sudo systemctl mask wpa_supplicant.service"
+  write_file_sudo "/etc/NetworkManager/conf.d/unmanaged.conf" "$nm_content" || return
+  write_file_sudo "$cfg_path" "$config_content" || return
+  write_file_sudo "$override_path" "$override_content" || return
+  run "sudo systemctl daemon-reload"
+  run "sudo systemctl enable --now wpa_supplicant@${setup_iface}.service"
+  run "sudo systemctl restart NetworkManager"
+  msg "Setup completed for ${setup_iface}. Config: ${cfg_path}"
+  iface="$setup_iface"
 }
 
 # --- main menu loop ---
@@ -92,27 +164,31 @@ main_menu() {
   ip_cl="$IP_DEFAULT_CL"
 
   while true; do
-    CHOICE=$(whiptail --title "$TITLE" --menu "IFACE=${iface} | FREQ=${freq}\nChoose an action:" 20 78 12 \
-      "1" "GO開始 (p2p_group_add freq=…)" \
-      "2" "WPS受け入れ (GO: wps_pbc)" \
-      "3" "探索開始 (p2p_find) / ピア一覧 (p2p_peers)" \
-      "4" "Client接続 (p2p_connect <MAC> pbc join)" \
-      "5" "IP割り当て (GO/Client)" \
-      "6" "状態表示 (systemctl / iw / wpa_cli)" \
-      "7" "ログ表示 (journalctl -u wpa_supplicant@IFACE)" \
-      "8" "設定変更 (IFACE / FREQ / IP)" \
-      "9" "終了" 3>&1 1>&2 2>&3) || exit 0
+    CHOICE=$(whiptail --title "$TITLE" --menu "IFACE=${iface} | FREQ=${freq}\nChoose an action:" 22 78 14 \
+      "0" "Run setup (mask/NetworkManager/wpa_supplicant)" \
+      "1" "Start GO (p2p_group_add freq=…)" \
+      "2" "Accept WPS (GO: wps_pbc)" \
+      "3" "Start discovery (p2p_find) / list peers (p2p_peers)" \
+      "4" "Connect as client (p2p_connect <MAC> pbc join)" \
+      "5" "Assign IP (GO/Client)" \
+      "6" "Show systemctl status" \
+      "7" "Show iw dev" \
+      "8" "Show wpa_cli status" \
+      "9" "Show logs (journalctl -u wpa_supplicant@IFACE)" \
+      "10" "Change settings (IFACE / FREQ / IP)" \
+      "11" "Exit" 3>&1 1>&2 2>&3) || exit 0
 
     case "$CHOICE" in
+      0)  setup_environment ;;
       1)  # GO start
-          freq=$(input "周波数 (MHz) を入力 (例: 2437=Ch6)" "$freq") || true
+          freq=$(input "Enter frequency in MHz (e.g., 2437=Ch6)" "$freq") || true
           run "sudo wpa_cli -i ${iface} p2p_group_add freq=${freq}"
           local p2p="$(p2p_name "$iface")"
           run "iw dev ${p2p:-p2p-${iface}-0} info || true"
           ;;
       2)  # WPS accept
           local p2p="$(p2p_name "$iface")"
-          if [ -z "$p2p" ]; then msg "p2pインターフェースが見つかりません。先にGO開始してください。"; continue; fi
+          if [ -z "$p2p" ]; then msg "No P2P interface found. Start GO first."; continue; fi
           run "sudo wpa_cli -i ${p2p} wps_pbc"
           ;;
       3)  # find & peers
@@ -120,31 +196,33 @@ main_menu() {
           run "sudo wpa_cli -i ${iface} p2p_peers"
           ;;
       4)  # connect as client
-          MAC=$(input "接続先のMACアドレス（例: bc:09:1b:1d:15:92）" "") || true
-          [ -z "${MAC:-}" ] && { msg "MACが未入力です。"; continue; }
+          MAC=$(input "Target MAC address (e.g., bc:09:1b:1d:15:92)" "") || true
+          [ -z "${MAC:-}" ] && { msg "MAC address was not provided."; continue; }
           run "sudo wpa_cli -i ${iface} p2p_connect ${MAC} pbc join"
           ;;
       5)  # assign IP
           local p2p="$(p2p_name "$iface")"
-          if [ -z "$p2p" ]; then msg "p2pインターフェースが見つかりません。"; continue; fi
-          if yesno "GOに ${ip_go} を割り当てますか？いいえを選ぶとClient (${ip_cl}) を割り当てます。"; then
-            ip=$(input "割り当てるIP/CIDR" "$ip_go") || true
+          if [ -z "$p2p" ]; then msg "No P2P interface found."; continue; fi
+          if yesno "Assign ${ip_go} to the GO? Selecting No assigns the client (${ip_cl})."; then
+            ip=$(input "Enter IP/CIDR to assign" "$ip_go") || true
           else
-            ip=$(input "割り当てるIP/CIDR" "$ip_cl") || true
+            ip=$(input "Enter IP/CIDR to assign" "$ip_cl") || true
           fi
-          [ -z "${ip:-}" ] && { msg "IP/CIDRが未入力です。"; continue; }
+          [ -z "${ip:-}" ] && { msg "IP/CIDR was not provided."; continue; }
           run "sudo ip addr add ${ip} dev ${p2p}"
           run "ip addr show ${p2p}"
           ;;
-      6)  show_status "$iface" ;;
-      7)  tail_logs "$iface" ;;
-      8)  # settings
-          iface=$(input "Wi‑Fi IFACE を入力（例: wlan0 / wlo1）" "$iface") || true
-          freq=$(input "デフォルト周波数 (MHz)" "$freq") || true
-          ip_go=$(input "GO用デフォルトIP/CIDR" "$ip_go") || true
-          ip_cl=$(input "Client用デフォルトIP/CIDR" "$ip_cl") || true
+      6)  show_systemd_status "$iface" ;;
+      7)  show_iw_status ;;
+      8)  show_wpa_status "$iface" ;;
+      9)  tail_logs "$iface" ;;
+      10) # settings
+          iface=$(input "Enter Wi-Fi interface (e.g., wlan0 / wlo1)" "$iface") || true
+          freq=$(input "Default frequency (MHz)" "$freq") || true
+          ip_go=$(input "Default GO IP/CIDR" "$ip_go") || true
+          ip_cl=$(input "Default client IP/CIDR" "$ip_cl") || true
           ;;
-      9)  clear; exit 0 ;;
+      11) clear; exit 0 ;;
     esac
   done
 }

@@ -1,5 +1,5 @@
 ======================================================================
-Client
+Client (Aircraft)
 ======================================================================
 
 sudo systemctl stop wpa_supplicant.service
@@ -7,6 +7,7 @@ sudo systemctl mask wpa_supplicant.service
 
 echo "[keyfile]
 unmanaged-devices=interface-name:wlan*;interface-name:p2p-*" | sudo tee /etc/NetworkManager/conf.d/unmanaged.conf
+sudo systemctl restart NetworkManager
 
 echo 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
@@ -26,7 +27,7 @@ ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -iwlan0 -c/etc/wpa_supplicant/wpa_s
 sudo systemctl daemon-reload
 sudo systemctl enable --now wpa_supplicant@wlan0.service
 
-sudo systemctl restart NetworkManager
+======================================================================
 
 sudo systemctl status NetworkManager
 sudo systemctl status wpa_supplicant.service
@@ -34,7 +35,16 @@ sudo systemctl status wpa_supplicant@wlan0.service
 
 ======================================================================
 
+sudo wpa_cli -i wlan0 p2p_cancel
+sudo wpa_cli -i wlan0 p2p_stop_find
 sudo wpa_cli -i wlan0 p2p_flush
+sudo pkill -f wpa_supplicant
+sudo ip link set wlan0 down
+sudo ip link set wlan0 up
+sudo systemctl restart wpa_supplicant@wlan0
+
+======================================================================
+
 sudo wpa_cli -i wlan0 p2p_find
 sudo wpa_cli -i wlan0 p2p_peers
 
@@ -55,8 +65,7 @@ sudo wpa_cli -i wlan0 p2p_peer bc:09:1b:1d:15:92
 
 ======================================================================
 
-sudo ip addr add 192.168.49.2/24 dev p2p-wlan0-1
-
+sudo ip addr add 192.168.49.2/24 dev p2p-wlan0-0
 
 ======================================================================
 

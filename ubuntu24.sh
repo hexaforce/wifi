@@ -1,14 +1,14 @@
 
 ======================================================================
-Group owner
+GO (Ground Station)
 ======================================================================
-
 
 sudo systemctl stop wpa_supplicant.service
 sudo systemctl mask wpa_supplicant.service
 
 echo "[keyfile]
 unmanaged-devices=sinterface-name:wlo*;interface-name:p2p-*" | sudo tee /etc/NetworkManager/conf.d/unmanaged.conf
+sudo systemctl restart NetworkManager
 
 echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
@@ -26,7 +26,7 @@ ExecStart=/usr/sbin/wpa_supplicant -Dnl80211 -iwlo1 -c/etc/wpa_supplicant/wpa_su
 sudo systemctl daemon-reload
 sudo systemctl enable --now wpa_supplicant@wlo1.service
 
-sudo systemctl restart NetworkManager
+======================================================================
 
 sudo systemctl status NetworkManager
 sudo systemctl status wpa_supplicant.service
@@ -70,4 +70,3 @@ sudo ip addr add 192.168.49.1/24 dev p2p-wlo1-0
 ======================================================================
 
 sudo journalctl -u wpa_supplicant@wlo1 -f
-

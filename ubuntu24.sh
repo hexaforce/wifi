@@ -69,16 +69,6 @@ sudo wpa_cli -p /var/run/wpa_supplicant -i p2p-wlo1-0 wps_pbc
 
 # ======================================================================
 
-# 接続確立後のステータス確認
-iw dev $(basename /sys/class/net/p2p-wlo1-*) info 2>/dev/null
-sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlo1-*)" status 2>/dev/null
-ip addr show $(ls /sys/class/net/ | grep ^p2p-wlo1-)
-
-iw dev $(basename /sys/class/net/p2p-wlo1-*) station dump
-sudo wpa_cli -i wlo1 p2p_peer da:3a:dd:09:24:2a
-
-# ======================================================================
-
 # IPv4アドレスを割り当て
 sudo ip addr add 192.168.49.1/24 dev p2p-wlo1-0
 
@@ -86,3 +76,13 @@ sudo ip addr add 192.168.49.1/24 dev p2p-wlo1-0
 
 # サービスログ確認
 sudo journalctl -u wpa_supplicant@wlo1 -f
+
+# ======================================================================
+
+# 接続確立後のステータス確認
+iw dev $(basename /sys/class/net/p2p-wlo1-*) info 2>/dev/null
+sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlo1-*)" status 2>/dev/null
+ip addr show $(ls /sys/class/net/ | grep ^p2p-wlo1-)
+
+iw dev $(basename /sys/class/net/p2p-wlo1-*) station dump
+sudo wpa_cli -i wlo1 p2p_peer da:3a:dd:09:24:2a

@@ -66,13 +66,8 @@ sudo wpa_cli -i wlan0 p2p_connect bc:09:1b:1d:15:92 pbc join
 
 # ======================================================================
 
-# 接続確立後のステータス確認
-iw dev $(basename /sys/class/net/p2p-wlan0-*) info 2>/dev/null
-sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlan0-*)" status 2>/dev/null
-ip addr show $(ls /sys/class/net/ | grep ^p2p-wlan0-)
-
-iw dev $(basename /sys/class/net/p2p-wlan0-*) station dump
-sudo wpa_cli -i wlan0 p2p_peer bc:09:1b:1d:15:92
+# サービスログ確認
+sudo journalctl -u wpa_supplicant@wlan0 -f
 
 # ======================================================================
 
@@ -81,5 +76,10 @@ sudo ip addr add 192.168.49.2/24 dev p2p-wlan0-0
 
 # ======================================================================
 
-# サービスログ確認
-sudo journalctl -u wpa_supplicant@wlan0 -f
+# 接続確立後のステータス確認
+iw dev $(basename /sys/class/net/p2p-wlan0-*) info 2>/dev/null
+sudo wpa_cli -i "$(basename /sys/class/net/p2p-wlan0-*)" status 2>/dev/null
+ip addr show $(ls /sys/class/net/ | grep ^p2p-wlan0-)
+
+iw dev $(basename /sys/class/net/p2p-wlan0-*) station dump
+sudo wpa_cli -i wlan0 p2p_peer bc:09:1b:1d:15:92

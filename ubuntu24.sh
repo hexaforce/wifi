@@ -14,6 +14,7 @@ echo "ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 device_name=GroundStation
 device_type=1-0050F204-1
+p2p_ssid_postfix=_FPV
 config_methods=virtual_push_button physical_display keypad" | sudo tee /etc/wpa_supplicant/wpa_supplicant-ground.conf
 
 sudo systemctl edit wpa_supplicant@wlo1.service

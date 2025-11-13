@@ -13,7 +13,7 @@ echo 'ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
 update_config=1
 p2p_go_intent=0
 device_name=Aircraft
-device_type=1-0050F204-1
+device_type=6-0050F204-1
 config_methods=virtual_push_button physical_display keypad' | sudo tee /etc/wpa_supplicant/wpa_supplicant-aircraft.conf
 
 sudo systemctl enable wpa_supplicant@wlan0.service

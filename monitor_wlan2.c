@@ -5,6 +5,7 @@
 #include "wpa_ctrl.h"
 
 #define CTRL_PATH "/var/run/wpa_supplicant/p2p-wlan0-0"
+// #define CTRL_PATH "/var/run/wpa_supplicant/wlan2"
 
 // コマンド送信＆レスポンス表示用ヘルパー
 static int send_cmd(struct wpa_ctrl *ctrl, const char *cmd)

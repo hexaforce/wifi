@@ -1,5 +1,5 @@
-TARGET := monitor_wlan0
-SRC := monitor_wlan0.c wpa_ctrl.c
+TARGET := monitor_wlan2
+SRC := monitor_wlan2.c wpa_ctrl.c
 CC := gcc
 CFLAGS := -Wall -O2
 LDFLAGS := 

@@ -11,15 +11,33 @@ static int send_cmd(struct wpa_ctrl *ctrl, const char *cmd)
 {
     char buf[4096];
     size_t len = sizeof(buf) - 1;
+    size_t cmd_len = strlen(cmd);
+    char cmd_buf[512];
 
-    int ret = wpa_ctrl_request(ctrl, cmd, strlen(cmd), buf, &len, NULL);
+    if (cmd_len + 1 >= sizeof(cmd_buf))
+    {
+        fprintf(stderr, "Command too long: %s\n", cmd);
+        return -1;
+    }
+
+    memcpy(cmd_buf, cmd, cmd_len);
+    cmd_buf[cmd_len++] = '\n';
+
+    int ret = wpa_ctrl_request(ctrl, cmd_buf, cmd_len, buf, &len, NULL);
     if (ret != 0)
     {
         fprintf(stderr, "Failed to send command: %s (ret=%d)\n", cmd, ret);
         return -1;
     }
 
-    buf[len] = '\0';
+    if (len > 0 && buf[len - 1] == '\n')
+    {
+        buf[len - 1] = '\0';
+    }
+    else
+    {
+        buf[len] = '\0';
+    }
     printf("%s\n", buf);
     return 0;
 }
